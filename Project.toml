@@ -1,0 +1,7 @@
+name = "JuLisp"
+uuid = "a365c3b4-ad00-4690-8719-f53625ec323b"
+authors = ["saka1029 <saka1029@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
