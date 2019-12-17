@@ -6,6 +6,7 @@ export symbol
 export cons, car, cdr, list
 export bind, get, define, set
 export special, procedure, evaluate
+export closure
 
 abstract type Object end
 
@@ -90,14 +91,18 @@ struct Special <: Object
 end
 special(f::Function) = Special(f)
 
-function procedure(f::Function)
-    function evlis(args::Object, env::Env)
-        args isa Cons ? cons(evaluate(args.car, env), evlis(args.cdr, env)) : NIL
-    end
-    Special((args, env) -> f(evlis(args, env)))
+function evlis(args::Object, env::Env)
+    args isa Cons ? cons(evaluate(args.car, env), evlis(args.cdr, env)) : NIL
 end
 
-evaluate(e::Cons, env::Env) = evaluate(e.car, env).apply(e.cdr, env)
+function procedure(f::Function)
+    Special((this, args, env) -> f(evlis(args, env)))
+end
+
+function evaluate(e::Cons, env::Env)
+    f = evaluate(e.car, env)
+    f.apply(f, e.cdr, env)
+end
 
 function show(io::IO, e::Cons)
     if e.cdr isa Cons && e.cdr.cdr isa Nil
@@ -124,13 +129,14 @@ struct Closure <: Object
     parms::Object
     body::Object
     env::Env
+    apply::Function
 end
 
-function apply(closuer::Closure, args::Object)
+function closureApply(closure::Closure, args::Object, env::Env)
     function pairlis(parms::Object, args::Object, env::Env)
-        while (pamrs isa Cons)
+        while (parms isa Cons)
             env = define(env, parms.car, args.car)
-            pamrs = parms.cdr
+            parms = parms.cdr
             args = args.cdr
         end
         if parms != NIL
@@ -141,12 +147,17 @@ function apply(closuer::Closure, args::Object)
 
     function progn(body::Object, env::Env)
         if body.cdr == NIL
-            return eval(body.car, env)
+            r = evaluate(body.car, env)
+            return r
         end
-        eval(body.car, env)
+        evaluate(body.car, env)
         return progn(body.cdr, env)
     end
 
-    n = pairlis(closure.parms, closure.args, closuer.env)
-    return progn(closuer.body, n)
+    n = pairlis(closure.parms, evlis(args, env), closure.env)
+    return progn(closure.body, n)
+end
+
+function closure(parms::Object, body::Object, env::Env)
+    Closure(parms, body, env, closureApply)
 end
