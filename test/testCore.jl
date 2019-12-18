@@ -46,12 +46,12 @@ end
     env = bind(symbol("cdr"), procedure(a -> a.car.cdr), env)
     env = bind(symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)), env)
     env = bind(symbol("list"), procedure(a -> a), env)
-    @test a == evaluate(lisp("'a"), env)
-    @test a == evaluate(lisp("(car '(a . b))"), env)
-    @test b == evaluate(lisp("(cdr '(a . b))"), env)
-    @test cons(a, b) == evaluate(lisp("(cons 'a 'b)"), env)
-    @test cons(a, NIL) == evaluate(lisp("(cons 'a nil)"), env)
-    @test list(a, b, c) == evaluate(lisp("(list 'a 'b 'c)"), env)
+    @test a == evaluate(expression("'a"), env)
+    @test a == evaluate(expression("(car '(a . b))"), env)
+    @test b == evaluate(expression("(cdr '(a . b))"), env)
+    @test cons(a, b) == evaluate(expression("(cons 'a 'b)"), env)
+    @test cons(a, NIL) == evaluate(expression("(cons 'a nil)"), env)
+    @test list(a, b, c) == evaluate(expression("(list 'a 'b 'c)"), env)
 end
 
 @testset "Closure" begin
@@ -60,6 +60,6 @@ end
     env = bind(symbol("cdr"), procedure(a -> a.car.cdr), env)
     env = bind(symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)), env)
     env = bind(symbol("list"), procedure(a -> a), env)
-    env = bind(symbol("kar"), closure(list(a), lisp("((car a))"), env), env)
-    @test a == evaluate(lisp("(kar '(a . b))"), env) 
+    env = bind(symbol("kar"), closure(list(a), expression("((car a))"), env), env)
+    @test a == evaluate(expression("(kar '(a . b))"), env) 
 end

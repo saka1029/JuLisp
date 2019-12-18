@@ -1,4 +1,4 @@
-export LispReader, lisp
+export LispReader, expression
 
 mutable struct LispReader
     in::IO
@@ -130,6 +130,6 @@ function Base.read(r::LispReader)
     return obj
 end
 
-function lisp(s::String)
+function expression(s::String)
     read(LispReader(s))
 end
