@@ -63,3 +63,8 @@ end
     env = bind(symbol("kar"), closure(list(a), expression("((car a))"), env), env)
     @test a == evaluate(expression("(kar '(a . b))"), env) 
 end
+
+@testset "Processor" begin
+    p = processor(LispReader("t"))
+    process(p)
+end

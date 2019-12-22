@@ -1,7 +1,7 @@
 import Base.show, Base.get, Base.bind
 
 export null, atom, consp
-export QUOTE, NIL
+export QUOTE, NIL, T
 export symbol
 export cons, car, cdr, list
 export bind, get, define, set
@@ -67,6 +67,13 @@ consp(e::Nil) = false
 show(io::IO, e::Nil) = print(io, "nil")
 const NIL = Nil()
 evaluate(obj::ConstObject, env::Env) = obj
+
+struct True <: ConstObject end
+null(e::True) = false
+atom(e::True) = true
+consp(e::True) = false
+show(io::IO, e::True) = print(io, "t")
+const T = True()
 
 struct Cons <: Object
     car::Object

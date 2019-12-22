@@ -84,7 +84,7 @@ function Base.read(r::LispReader)
             s *= r.ch
             getch(r)
         end
-        s == "nil" ? NIL : symbol(s)
+        s == "nil" ? NIL : s == "t" ? T : symbol(s)
     end
 
     function readNumber(s::String)
