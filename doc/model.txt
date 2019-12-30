@@ -1,0 +1,22 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+
+abstract class Object <<abstract type>>
+
+class Cons <<struct>> {
+    + car : Object
+    + cdr : Object
+}
+Object <|-- Cons
+
+class LispSymbol <<struct>> {
+    + symbol : Symbol
+}
+Object <|-- LispSymbol
+
+class Applicable <<struct>> {
+    + apply : Function
+}
+Object <|-- Applicable
+@enduml
