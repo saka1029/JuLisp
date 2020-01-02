@@ -53,30 +53,36 @@ end
 
 
 @testset "env" begin
-    @test list(cons(a, a), cons(b, cons(b, c))) == define(define(NIL, b, cons(b, c)), a, a)
-    @test a          == get(define(define(NIL, b, cons(b, c)), a, a), a)
-    @test cons(b, c) == get(define(define(NIL, b, cons(b, c)), a, a), b)
-    @test cons(a, b) == get(define(NIL, a, cons(a, b)), a)
-    @test_throws ErrorException get(define(NIL, b, cons(b, c)), c)
-    env = define(NIL, a, a)
-    @test cons(a, b) == set(env, a, cons(a, b))
-    @test cons(a, b) == get(env, a)
+    e = env()
+    define(e, b, cons(b, c))
+    define(e, a, a)
+    @test a          == get(e, a)
+    @test cons(b, c) == get(e, b)
+    define(e, a, cons(a, b))
+    @test cons(a, b) == get(e, a)
+    e = env()
+    define(e, b, cons(b, c))
+    @test_throws ErrorException get(e, c)
+    e = env()
+    define(e, a, a)
+    define(e, a, cons(a, b))
+    @test cons(a, b) == get(e, a)
 end
 
 @testset "evaluate" begin
-    env = NIL
-    env = define(env, NIL, NIL)
-    env = define(env, QUOTE, special((s, x, e) -> car(x)))
-    env = define(env, symbol("car"), procedure(a -> a.car.car))
-    env = define(env, symbol("cdr"), procedure(a -> a.car.cdr))
-    env = define(env, symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)))
-    env = define(env, symbol("list"), procedure(a -> a))
-    @test a == evaluate(expression("(quote a)"), env)
-    @test a == evaluate(expression("(car (quote (a . b)))"), env)
-    @test b == evaluate(expression("(cdr (quote (a . b)))"), env)
-    @test cons(a, b) == evaluate(expression("(cons (quote a) (quote b))"), env)
-    @test cons(a, NIL) == evaluate(expression("(cons (quote a) nil)"), env)
-    @test list(a, b, c) == evaluate(expression("(list (quote a) (quote b) (quote c))"), env)
+    e = env()
+    define(e, NIL, NIL)
+    define(e, QUOTE, special((s, x, e) -> car(x)))
+    define(e, symbol("car"), procedure(a -> a.car.car))
+    define(e, symbol("cdr"), procedure(a -> a.car.cdr))
+    define(e, symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)))
+    define(e, symbol("list"), procedure(a -> a))
+    @test a == evaluate(lispRead("(quote a)"), e)
+    @test a == evaluate(lispRead("(car (quote (a . b)))"), e)
+    @test b == evaluate(lispRead("(cdr (quote (a . b)))"), e)
+    @test cons(a, b) == evaluate(lispRead("(cons (quote a) (quote b))"), e)
+    @test cons(a, NIL) == evaluate(lispRead("(cons (quote a) nil)"), e)
+    @test list(a, b, c) == evaluate(lispRead("(list (quote a) (quote b) (quote c))"), e)
 end
 
 #@testset "Closure" begin
@@ -85,8 +91,8 @@ end
 #    env = bind(symbol("cdr"), procedure(a -> a.car.cdr), env)
 #    env = bind(symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)), env)
 #    env = bind(symbol("list"), procedure(a -> a), env)
-#    env = bind(symbol("kar"), closure(list(a), expression("((car a))"), env), env)
-#    @test a == evaluate(expression("(kar '(a . b))"), env) 
+#    env = bind(symbol("kar"), closure(list(a), lispRead("((car a))"), env), env)
+#    @test a == evaluate(lispRead("(kar '(a . b))"), env) 
 #end
 #
 #@testset "Processor" begin
@@ -94,10 +100,10 @@ end
 #    process(p)
 #end
 
-@testset "expression" begin
-    @test a == expression("a")
-    @test cons(a, b) == expression("(a . b)")
-    @test list(a, b) == expression("(a b)")
-    @test list(QUOTE, a) == expression("(quote a)")
-    @test list(QUOTE, list(a, b)) == expression("(quote (a b))")
+@testset "lispRead" begin
+    @test a == lispRead("a")
+    @test cons(a, b) == lispRead("(a . b)")
+    @test list(a, b) == lispRead("(a b)")
+    @test list(QUOTE, a) == lispRead("(quote a)")
+    @test list(QUOTE, list(a, b)) == lispRead("(quote (a b))")
 end

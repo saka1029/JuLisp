@@ -6,78 +6,43 @@ export null, atom
 export NIL, T, QUOTE, LAMBDA
 export symbol
 export cons, car, cdr, list
-export get, define, set
+export env, get, define, set
 export special, procedure, evaluate
 export closure
-export LispReader, expression
+export LispReader, lispRead
 
 abstract type Object end
 
-struct LispSymbol <: Object
+struct Sym <: Object
     symbol::Symbol
 end
-symbol(name::String) = LispSymbol(Symbol(name))
+
+struct Cons <: Object
+    car::Object
+    cdr::Object
+end
+
+mutable struct Env
+    bind::Object
+end
+env() = Env(NIL)
+
+symbol(name::String) = Sym(Symbol(name))
 const NIL = symbol("nil")
 const T = symbol("t")
 const QUOTE = symbol("quote")
 const LAMBDA = symbol("lambda")
-const EOF = symbol("*EOF*")
-atom(e::LispSymbol) = true
+const END_OF_EXPRESSION = symbol("*end-of-expression*")
+
 null(e::Object) = e == NIL
-show(io::IO, e::LispSymbol) = print(io, e.symbol)
+atom(e::Sym) = true
 
-evaluate(variable::LispSymbol, env::Object) = get(env, variable)
+show(io::IO, e::Sym) = print(io, e.symbol)
 
-abstract type ConstObject <: Object end
-
-mutable struct Cons <: Object
-    car::Object
-    cdr::Object
-end
 atom(e::Cons) = false
 cons(a::Object, b::Object) = Cons(a, b)
 car(e::Cons) = e.car
 cdr(e::Cons) = e.cdr
-(==)(a::Cons, b::Cons) = a.car == b.car && b.cdr == b.cdr
-
-function list(args::Object...)
-    r = NIL
-    for e in reverse(args)
-        r = cons(e, r)
-    end
-    return r
-end
-
-function find(env::Object, variable::LispSymbol)
-    while env != NIL
-        if variable == env.car.car
-            return env.car
-        end
-        env = env.cdr
-    end
-    error("Variable $variable not found")
-end
-
-get(env::Object, variable::LispSymbol) = find(env, variable).cdr
-
-define(env::Object, variable::LispSymbol, value::Object) = Cons(Cons(variable, value), env)
-
-set(env::Object, variable::LispSymbol, value::Object) = find(env, variable).cdr = value
-
-struct Applicable <: Object
-    apply::Function
-end
-
-special(f::Function) = Applicable(f)
-
-evlis(args::Object, env::Object) = args isa Cons ? Cons(evaluate(args.car, env), evlis(args.cdr, env)) : NIL
-
-procedure(f::Function) = Applicable((this, args, env) -> f(evlis(args, env)))
-
-function evaluate(e::Cons, env::Object)
-    f = evaluate(e.car, env)
-    f.apply(f, e.cdr, env)
-end
 
 function show(io::IO, e::Cons)
     x::Object = e
@@ -94,68 +59,95 @@ function show(io::IO, e::Cons)
     print(io, ")")
 end
 
-struct Closure <: Object
-    parms::Object
-    body::Object
-    env::Object
+function list(args::Object...)
+    r = NIL
+    for e in reverse(args)
+        r = cons(e, r)
+    end
+    return r
+end
+
+evaluate(variable::Sym, env::Env) = get(env, variable)
+
+function find(env::Env, variable::Sym)
+    bind = env.bind
+    while bind != NIL
+        if variable == bind.car.car
+            return bind.car
+        end
+        bind = bind.cdr
+    end
+    error("Variable $variable not found")
+end
+
+get(env::Env, var) = find(env, var).cdr
+
+function define(env::Env, var::Sym, val::Object)
+    env.bind = Cons(Cons(var, val), env.bind) 
+    return val
+end
+
+struct Applicable <: Object
     apply::Function
 end
 
-function closureApply(closure::Closure, args::Object, env::Object)
-    function pairlis(parms::Object, args::Object, env::Object)
+special(f::Function) = Applicable(f)
+
+function evlis(args::Object, env::Env)
+    args isa Cons ? Cons(evaluate(args.car, env), evlis(args.cdr, env)) : NIL 
+end
+
+function procedure(f::Function)
+    Applicable((this, args, env) -> f(evlis(args, env)))
+end
+
+function evaluate(e::Cons, env::Env)
+    applicable = evaluate(e.car, env)
+    applicable.apply(applicable, e.cdr, env)
+end
+
+struct Closure <: Object
+    parms::Object
+    body::Object
+    env::Env
+    apply::Function
+end
+
+function closureApply(closure::Closure, args::Object, env::Env)
+    function pairlis(parms::Object, args::Object, env::Env)
         while (parms isa Cons)
-            env = define(env, parms.car, args.car)
+            define(env, parms.car, args.car)
             parms = parms.cdr
             args = args.cdr
         end
         if parms != NIL
-            env = define(env, parms, args)
+            define(env, parms, args)
         end
-        return env
     end
 
-    function progn(body::Object, env::Object)
-        if body.cdr == NIL
-            r = evaluate(body.car, env)
-            return r
-        end
-        evaluate(body.car, env)
-        return progn(body.cdr, env)
-    end
-
-    n = pairlis(closure.parms, evlis(args, env), closure.env)
-    return progn(closure.body, n)
+    nenv = Env(closure.env.bind)
+    pairlis(closure.parms, evlis(args, env), nenv)
+    return evaluate(closure.body.car, nenv)
 end
 
-function closure(parms::Object, body::Object, env::Object)
-    Closure(parms, body, env, closureApply)
-end
+closure(parms::Object, body::Object, env::Env) = Closure(parms, body, env, closureApply)
 
-
+const EOF = '\uFFFF'
 
 mutable struct LispReader
     in::IO
     ch::Char
 end
 
-function getch(r::LispReader)
-    if eof(r.in)
-        r.ch = '\uFFFF'
-    else
-        r.ch = read(r.in, Char)
-    end
-    r.ch
-end
+getch(r::LispReader) = eof(r.in) ? r.ch = EOF : r.ch = read(r.in, Char)
 
 function LispReader(in::IO)
-    r = LispReader(in, '\uFFFF')
+    r = LispReader(in, EOF)
     getch(r)
     r
 end
 
-function LispReader(s::String)
-    LispReader(IOBuffer(s))
-end
+LispReader(s::String) = LispReader(IOBuffer(s))
 
 function Base.read(r::LispReader)
 
@@ -167,7 +159,7 @@ function Base.read(r::LispReader)
         end
     end
 
-    function makeList(elements, last::Object)
+    function makeList(elements::Array{Object, 1}, last::Object)
         if last == NIL
             list(elements...)
         else
@@ -186,7 +178,7 @@ function Base.read(r::LispReader)
             if r.ch == ')'
                 getch(r)
                 return makeList(elements, last)
-            elseif r.ch == '\uFFFF'
+            elseif r.ch == EOF
                 error(") expected")
             else
                 e = readObject()
@@ -206,7 +198,7 @@ function Base.read(r::LispReader)
 
     isdelim(c::Char) = occursin(c,  "'(),\"")
 
-    issymbol(c::Char) = c != '\uFFFF' && !isspace(c) && !isdelim(c)
+    issymbol(c::Char) = c != EOF && !isspace(c) && !isdelim(c)
 
     function readSymbol(s::String)
         while issymbol(r.ch)
@@ -220,9 +212,7 @@ function Base.read(r::LispReader)
         first = r.ch
         s = "" * first
         getch(r)
-        if first == '+' || first == '-'
-            return isdigit(r.ch) ? readNumber(s) : readSymbol(s)
-        elseif first == '.'
+        if first == '.'
             return issymbol(r.ch) ? readSymbol(s) : DOT
         else
             return readSymbol(s)
@@ -231,8 +221,8 @@ function Base.read(r::LispReader)
 
     function readObject()
         skipSpaces()
-        if r.ch == '\uFFFF'
-            return EOF
+        if r.ch == EOF
+            return END_OF_EXPRESSION
         elseif r.ch == '('
             getch(r)
             return readList()
@@ -248,7 +238,7 @@ function Base.read(r::LispReader)
     return obj
 end
 
-expression(s::String) = read(LispReader(s))
+lispRead(s::String) = read(LispReader(s))
 
 #include("processor.jl")
 
