@@ -196,7 +196,7 @@ function Base.read(r::LispReader)
                     if r.ch != ')'
                         error(") expected")
                     end
-                    getch(r)
+                    getch(r) # skip ')'
                     return makeList(elements, last)
                 end
                 push!(elements, e)
@@ -205,7 +205,6 @@ function Base.read(r::LispReader)
     end
 
     isdelim(c::Char) = occursin(c,  "'(),\"")
-
     issymbol(c::Char) = c != EOF && !isspace(c) && !isdelim(c)
 
     function readSymbol(s::String)
@@ -247,7 +246,5 @@ function Base.read(r::LispReader)
 end
 
 lispRead(s::String) = read(LispReader(s))
-
-#include("processor.jl")
 
 end # module

@@ -96,12 +96,12 @@ end
     @test a == evaluate(lispRead("((lambda (a) (car a)) (quote (a . b)))"), e)
     define(e, symbol("kar"), closure(list(a), lispRead("((car a))"), e))
     @test a == evaluate(lispRead("(kar (quote (a . b)))"), e) 
+    define(e, symbol("define"), special((s, a, e) -> define(e, a.car, evaluate(a.cdr.car, e))))
+    @test b == evaluate(lispRead("(define a (quote b))"), e)
+    @test b == evaluate(a, e)
+    evaluate(lispRead("(define kons (lambda (a b) (cons a b)))"), e)
+    @test cons(a, b) == evaluate(lispRead("(kons (quote a) (quote b))"), e)
 end
-
-#@testset "Processor" begin
-#    p = processor(LispReader("t"))
-#    process(p)
-#end
 
 @testset "lispRead" begin
     @test a == lispRead("a")
