@@ -3,7 +3,7 @@ module JuLisp
 import Base.==, Base.show, Base.get, Base.Iterators
 
 export null, atom
-export NIL, T, QUOTE, LAMBDA
+export NIL, T, QUOTE
 export symbol
 export cons, car, cdr, list
 export env, get, define, set
@@ -11,39 +11,45 @@ export special, procedure, evaluate
 export closure
 export LispReader, lispRead
 
+"""
+Lispオブジェクトの抽象型です。
+すべてのLispオブジェクトはこの型を継承する必要があります。
+"""
 abstract type Object end
 
+"""
+Lispにおけるシンボルの型です。
+"""
 struct Sym <: Object
     symbol::Symbol
 end
-
-struct Cons <: Object
-    car::Object
-    cdr::Object
-end
-
-mutable struct Env
-    bind::Object
-end
-env() = Env(NIL)
-
 symbol(name::String) = Sym(Symbol(name))
 const NIL = symbol("nil")
 const T = symbol("t")
 const QUOTE = symbol("quote")
-const LAMBDA = symbol("lambda")
 const END_OF_EXPRESSION = symbol("*end-of-expression*")
-
 null(e::Object) = e == NIL
 atom(e::Sym) = true
-
 show(io::IO, e::Sym) = print(io, e.symbol)
 
+"""
+コンスセルの型です。
+"""
+struct Cons <: Object
+    car::Object
+    cdr::Object
+end
 atom(e::Cons) = false
 cons(a::Object, b::Object) = Cons(a, b)
 car(e::Cons) = e.car
 cdr(e::Cons) = e.cdr
-
+function list(args::Object...)
+    r = NIL
+    for e in reverse(args)
+        r = cons(e, r)
+    end
+    return r
+end
 function show(io::IO, e::Cons)
     x::Object = e
     print(io, "(")
@@ -59,15 +65,13 @@ function show(io::IO, e::Cons)
     print(io, ")")
 end
 
-function list(args::Object...)
-    r = NIL
-    for e in reverse(args)
-        r = cons(e, r)
-    end
-    return r
+"""
+変数の束縛を保持する型です。
+"""
+mutable struct Env
+    bind::Object
 end
-
-evaluate(variable::Sym, env::Env) = get(env, variable)
+env() = Env(NIL)
 
 function find(env::Env, variable::Sym)
     bind = env.bind
@@ -87,6 +91,9 @@ function define(env::Env, var::Sym, val::Object)
     return val
 end
 
+"""
+Apply可能なLispオブジェクトの型です。
+"""
 struct Applicable <: Object
     apply::Function
 end
@@ -101,9 +108,11 @@ function procedure(f::Function)
     Applicable((this, args, env) -> f(evlis(args, env)))
 end
 
+evaluate(variable::Sym, env::Env) = get(env, variable)
+
 function evaluate(e::Cons, env::Env)
-    applicable = evaluate(e.car, env)
-    applicable.apply(applicable, e.cdr, env)
+    a = evaluate(e.car, env)
+    a.apply(a, e.cdr, env)
 end
 
 struct Closure <: Object
@@ -124,7 +133,6 @@ function closureApply(closure::Closure, args::Object, env::Env)
             define(env, parms, args)
         end
     end
-
     nenv = Env(closure.env.bind)
     pairlis(closure.parms, evlis(args, env), nenv)
     return evaluate(closure.body.car, nenv)

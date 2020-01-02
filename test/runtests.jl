@@ -8,7 +8,6 @@ c = symbol("c")
 @testset "LispSymbol" begin
     @test T == symbol("t")
     @test QUOTE == symbol("quote")
-    @test LAMBDA == symbol("lambda")
     @test symbol("a") == symbol("a")
 end
 
@@ -85,16 +84,20 @@ end
     @test list(a, b, c) == evaluate(lispRead("(list (quote a) (quote b) (quote c))"), e)
 end
 
-#@testset "Closure" begin
-#    env = bind(QUOTE, special((s, x, e) -> car(x)))
-#    env = bind(symbol("car"), procedure(a -> a.car.car), env)
-#    env = bind(symbol("cdr"), procedure(a -> a.car.cdr), env)
-#    env = bind(symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)), env)
-#    env = bind(symbol("list"), procedure(a -> a), env)
-#    env = bind(symbol("kar"), closure(list(a), lispRead("((car a))"), env), env)
-#    @test a == evaluate(lispRead("(kar '(a . b))"), env) 
-#end
-#
+@testset "Closure" begin
+    e = env()
+    define(e, NIL, NIL)
+    define(e, QUOTE, special((s, a, e) -> car(a)))
+    define(e, symbol("car"), procedure(a -> a.car.car))
+    define(e, symbol("cdr"), procedure(a -> a.car.cdr))
+    define(e, symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)))
+    define(e, symbol("list"), procedure(a -> a))
+    define(e, symbol("lambda"), special((s, a, e) -> closure(a.car, a.cdr, e)))
+    @test a == evaluate(lispRead("((lambda (a) (car a)) (quote (a . b)))"), e)
+    define(e, symbol("kar"), closure(list(a), lispRead("((car a))"), e))
+    @test a == evaluate(lispRead("(kar (quote (a . b)))"), e) 
+end
+
 #@testset "Processor" begin
 #    p = processor(LispReader("t"))
 #    process(p)
