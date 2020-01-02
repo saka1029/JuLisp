@@ -20,7 +20,19 @@ class Applicable <<struct>> {
 }
 Object <|-- Applicable
 
-class Env <<struct>> {
+class Env <<struct, mutable>> {
     + bind : Object
+}
+
+class Closure <<struct>> {
+    + parms : Object
+    + args : Object
+    + env : Env
+    + apply : Function
+}
+
+class LispReader <<struct>> {
+    + in : IO
+    + ch : Char
 }
 @enduml
