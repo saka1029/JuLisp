@@ -2,7 +2,7 @@
 
 skinparam classAttributeIconSize 0
 
-abstract class Object <<abstract type>>
+abstract class Object <<abstract>>
 
 class Cons <<struct>> {
     + car : Object
@@ -20,16 +20,17 @@ class Applicable <<struct>> {
 }
 Object <|-- Applicable
 
-class Env <<struct, mutable>> {
+class Env <<struct>> <<mutable>> {
     + bind : Object
 }
 
 class Closure <<struct>> {
     + parms : Object
-    + args : Object
+    + body : Object
     + env : Env
     + apply : Function
 }
+Object <|-- Closure
 
 class LispReader <<struct>> {
     + in : IO
