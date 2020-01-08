@@ -35,14 +35,14 @@ show(io::IO, e::Sym) = print(io, e.symbol)
 """
 コンスセルの型です。
 """
-struct Cons <: Object
+struct Pair <: Object
     car::Object
     cdr::Object
 end
-atom(e::Cons) = false
-cons(a::Object, b::Object) = Cons(a, b)
-car(e::Cons) = e.car
-cdr(e::Cons) = e.cdr
+atom(e::Pair) = false
+cons(a::Object, b::Object) = Pair(a, b)
+car(e::Pair) = e.car
+cdr(e::Pair) = e.cdr
 function list(args::Object...)
     r = NIL
     for e in reverse(args)
@@ -50,11 +50,11 @@ function list(args::Object...)
     end
     return r
 end
-function show(io::IO, e::Cons)
+function show(io::IO, e::Pair)
     x::Object = e
     print(io, "(")
     sep = ""
-    while x isa Cons
+    while x isa Pair
         print(io, sep, x.car)
         sep = " "
         x = x.cdr
@@ -87,7 +87,7 @@ end
 get(env::Env, var) = find(env, var).cdr
 
 function define(env::Env, var::Sym, val::Object)
-    env.bind = Cons(Cons(var, val), env.bind) 
+    env.bind = Pair(Pair(var, val), env.bind) 
     return val
 end
 
@@ -101,7 +101,7 @@ end
 special(f::Function) = Applicable(f)
 
 function evlis(args::Object, env::Env)
-    args isa Cons ? Cons(evaluate(args.car, env), evlis(args.cdr, env)) : NIL 
+    args isa Pair ? Pair(evaluate(args.car, env), evlis(args.cdr, env)) : NIL 
 end
 
 function procedure(f::Function)
@@ -110,7 +110,7 @@ end
 
 evaluate(variable::Sym, env::Env) = get(env, variable)
 
-function evaluate(e::Cons, env::Env)
+function evaluate(e::Pair, env::Env)
     a = evaluate(e.car, env)
     a.apply(a, e.cdr, env)
 end
@@ -124,7 +124,7 @@ end
 
 function closureApply(closure::Closure, args::Object, env::Env)
     function pairlis(parms::Object, args::Object, env::Env)
-        while (parms isa Cons)
+        while (parms isa Pair)
             define(env, parms.car, args.car)
             parms = parms.cdr
             args = args.cdr
