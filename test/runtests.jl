@@ -32,7 +32,7 @@ end
     @test atom(a)
 end
 
-@testset "Cons" begin
+@testset "Pair" begin
     @test a == car(cons(a, b))
     @test b == cdr(cons(a, b))
     @test !null(cons(a, b))
