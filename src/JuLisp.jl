@@ -9,17 +9,12 @@ export cons, car, cdr, list
 export env, get, define, set
 export special, procedure, evaluate
 export closure
-export LispReader, lispRead
+export LispReader, lispRead, repl
 
-"""
-Lispオブジェクトの抽象型です。
-すべてのLispオブジェクトはこの型を継承する必要があります。
-"""
+"Lispオブジェクトの抽象型です"
 abstract type Object end
 
-"""
-Lispにおけるシンボルの型です。
-"""
+"Lispにおけるシンボルの型です"
 struct Sym <: Object
     symbol::Symbol
 end
@@ -32,9 +27,6 @@ null(e::Object) = e == NIL
 atom(e::Sym) = true
 show(io::IO, e::Sym) = print(io, e.symbol)
 
-"""
-コンスセルの型です。
-"""
 struct Pair <: Object
     car::Object
     cdr::Object
@@ -65,9 +57,7 @@ function show(io::IO, e::Pair)
     print(io, ")")
 end
 
-"""
-変数の束縛を保持する型です。
-"""
+"変数の束縛を保持する型です"
 mutable struct Env
     bind::Object
 end
@@ -91,9 +81,7 @@ function define(env::Env, var::Sym, val::Object)
     return val
 end
 
-"""
-Apply可能なLispオブジェクトの型です。
-"""
+"Apply可能なLispオブジェクトの型です"
 struct Applicable <: Object
     apply::Function
 end
@@ -104,6 +92,7 @@ function evlis(args::Object, env::Env)
     args isa Pair ? Pair(evaluate(args.car, env), evlis(args.cdr, env)) : NIL 
 end
 
+"Lispの関数を作成する関数です"
 function procedure(f::Function)
     Applicable((this, args, env) -> f(evlis(args, env)))
 end
@@ -115,11 +104,12 @@ function evaluate(e::Pair, env::Env)
     a.apply(a, e.cdr, env)
 end
 
+"クロージャです"
 struct Closure <: Object
     parms::Object
     body::Object
-    env::Env
-    apply::Function
+    env::Env    # クロージャが定義された時の変数束縛
+    apply::Function # クロージャの関数本体
 end
 
 function closureApply(closure::Closure, args::Object, env::Env)
@@ -138,6 +128,7 @@ function closureApply(closure::Closure, args::Object, env::Env)
     return evaluate(closure.body.car, nenv)
 end
 
+"クロージャを作成します"
 closure(parms::Object, body::Object, env::Env) = Closure(parms, body, env, closureApply)
 
 const EOF = '\uFFFF'
@@ -246,5 +237,33 @@ function Base.read(r::LispReader)
 end
 
 lispRead(s::String) = read(LispReader(s))
+
+
+function repl(in::LispReader, out::IO, prompt::String)
+    predicate(e::Bool) = e ? T : NIL
+    e = env()
+    define(e, NIL, NIL)
+    define(e, T, T)
+    define(e, QUOTE, special((s, a, e) -> a.car))
+    define(e, symbol("atom"), procedure(a -> predicate(atom(a.car))))
+    define(e, symbol("null"), procedure(a -> predicate(null(a.car))))
+    define(e, symbol("car"), procedure(a -> a.car.car))
+    define(e, symbol("cdr"), procedure(a -> a.cdr.car))
+    define(e, symbol("cons"), procedure(a -> Pair(a.car, a.cdr.car)))
+    define(e, symbol("define"), special((s, a, e) -> closure(a.car, a.cdr, e)))
+    define(e, symbol("lambda"), special((s, a, e) -> define(e, a.car, evaluate(a.cdr.car, e))))
+    while true
+        print(out, prompt)
+        flush(out)
+        x = read(in)
+#        println(out, "x=$x")
+        if x == END_OF_EXPRESSION
+            break
+        end
+        show(out, evaluate(x, e))
+        println(out)
+    end
+    return out
+end
 
 end # module

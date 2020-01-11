@@ -103,10 +103,7 @@ end
     @test cons(a, b) == evaluate(lispRead("(kons (quote a) (quote b))"), e)
 end
 
-@testset "lispRead" begin
-    @test a == lispRead("a")
-    @test cons(a, b) == lispRead("(a . b)")
-    @test list(a, b) == lispRead("(a b)")
-    @test list(QUOTE, a) == lispRead("(quote a)")
-    @test list(QUOTE, list(a, b)) == lispRead("(quote (a b))")
+@testset "repl" begin
+    proc(e::String) = repl(LispReader(e), IOBuffer(), "")
+    @test "t\n" == String(take!(proc("(atom (quote a))")))
 end
