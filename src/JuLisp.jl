@@ -18,11 +18,14 @@ abstract type Object end
 struct Sym <: Object
     symbol::Symbol
 end
+
 symbol(name::String) = Sym(Symbol(name))
+
 const NIL = symbol("nil")
 const T = symbol("t")
 const QUOTE = symbol("quote")
 const END_OF_EXPRESSION = symbol("*end-of-expression*")
+
 null(e::Object) = e == NIL
 atom(e::Sym) = true
 show(io::IO, e::Sym) = print(io, e.symbol)
@@ -31,10 +34,12 @@ struct Pair <: Object
     car::Object
     cdr::Object
 end
+
 atom(e::Pair) = false
 cons(a::Object, b::Object) = Pair(a, b)
 car(e::Pair) = e.car
 cdr(e::Pair) = e.cdr
+
 function list(args::Object...)
     r = NIL
     for e in reverse(args)
@@ -42,7 +47,14 @@ function list(args::Object...)
     end
     return r
 end
+
 function show(io::IO, e::Pair)
+    if e.cdr isa Pair && e.cdr.cdr == NIL
+        if e.car == QUOTE
+            print(io, "'", e.cdr.car)
+            return
+        end
+    end
     x::Object = e
     print(io, "(")
     sep = ""
@@ -61,6 +73,7 @@ end
 mutable struct Env
     bind::Object
 end
+
 env() = Env(NIL)
 
 function find(env::Env, variable::Sym)
@@ -224,6 +237,9 @@ function Base.read(r::LispReader)
         elseif r.ch == '('
             getch(r)
             return readList()
+        elseif r.ch == '\''
+            getch(r)
+            return list(QUOTE, readObject())
         else
             return readAtom()
         end

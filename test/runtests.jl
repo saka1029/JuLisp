@@ -45,9 +45,9 @@ end
     @test cons(a, cons(b, NIL)) == list(a, b)
     @test "(a . b)" == string(cons(a, b))
     @test "(a b)" == string(cons(a, cons(b, NIL)))
-    @test "(quote a)" == string(cons(QUOTE, cons(a, NIL)))
+    @test "'a" == string(cons(QUOTE, cons(a, NIL)))
     @test "(quote . a)" == string(cons(QUOTE, a))
-    @test "(quote (a b))" == string(cons(QUOTE, cons(cons(a, cons(b, NIL)), NIL)))
+    @test "'(a b)" == string(cons(QUOTE, cons(cons(a, cons(b, NIL)), NIL)))
 end
 
 
@@ -76,12 +76,12 @@ end
     define(e, symbol("cdr"), procedure(a -> a.car.cdr))
     define(e, symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)))
     define(e, symbol("list"), procedure(a -> a))
-    @test a == evaluate(lispRead("(quote a)"), e)
-    @test a == evaluate(lispRead("(car (quote (a . b)))"), e)
-    @test b == evaluate(lispRead("(cdr (quote (a . b)))"), e)
-    @test cons(a, b) == evaluate(lispRead("(cons (quote a) (quote b))"), e)
-    @test cons(a, NIL) == evaluate(lispRead("(cons (quote a) nil)"), e)
-    @test list(a, b, c) == evaluate(lispRead("(list (quote a) (quote b) (quote c))"), e)
+    @test a == evaluate(lispRead("'a"), e)
+    @test a == evaluate(lispRead("(car '(a . b))"), e)
+    @test b == evaluate(lispRead("(cdr '(a . b))"), e)
+    @test cons(a, b) == evaluate(lispRead("(cons 'a ' b)"), e)
+    @test cons(a, NIL) == evaluate(lispRead("(cons 'a nil)"), e)
+    @test list(a, b, c) == evaluate(lispRead("(list 'a 'b 'c)"), e)
 end
 
 @testset "Closure" begin
@@ -93,17 +93,17 @@ end
     define(e, symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)))
     define(e, symbol("list"), procedure(a -> a))
     define(e, symbol("lambda"), special((s, a, e) -> closure(a.car, a.cdr, e)))
-    @test a == evaluate(lispRead("((lambda (a) (car a)) (quote (a . b)))"), e)
+    @test a == evaluate(lispRead("((lambda (a) (car a)) '(a . b))"), e)
     define(e, symbol("kar"), closure(list(a), lispRead("((car a))"), e))
-    @test a == evaluate(lispRead("(kar (quote (a . b)))"), e) 
+    @test a == evaluate(lispRead("(kar '(a . b))"), e) 
     define(e, symbol("define"), special((s, a, e) -> define(e, a.car, evaluate(a.cdr.car, e))))
-    @test b == evaluate(lispRead("(define a (quote b))"), e)
+    @test b == evaluate(lispRead("(define a 'b)"), e)
     @test b == evaluate(a, e)
     evaluate(lispRead("(define kons (lambda (a b) (cons a b)))"), e)
-    @test cons(a, b) == evaluate(lispRead("(kons (quote a) (quote b))"), e)
+    @test cons(a, b) == evaluate(lispRead("(kons 'a 'b)"), e)
 end
 
 @testset "repl" begin
     proc(e::String) = repl(LispReader(e), IOBuffer(), "")
-    @test "t\n" == String(take!(proc("(atom (quote a))")))
+    @test "t\n" == String(take!(proc("(atom 'a)")))
 end
