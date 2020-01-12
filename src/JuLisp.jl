@@ -248,7 +248,7 @@ function repl(in::LispReader, out::IO, prompt::String)
     define(e, symbol("atom"), procedure(a -> predicate(atom(a.car))))
     define(e, symbol("null"), procedure(a -> predicate(null(a.car))))
     define(e, symbol("car"), procedure(a -> a.car.car))
-    define(e, symbol("cdr"), procedure(a -> a.cdr.car))
+    define(e, symbol("cdr"), procedure(a -> a.car.cdr))
     define(e, symbol("cons"), procedure(a -> Pair(a.car, a.cdr.car)))
     define(e, symbol("define"), special((s, a, e) -> closure(a.car, a.cdr, e)))
     define(e, symbol("lambda"), special((s, a, e) -> define(e, a.car, evaluate(a.cdr.car, e))))
@@ -257,7 +257,7 @@ function repl(in::LispReader, out::IO, prompt::String)
         flush(out)
         x = read(in)
 #        println(out, "x=$x")
-        if x == END_OF_EXPRESSION
+        if x == END_OF_EXPRESSION || x == symbol("quit")
             break
         end
         show(out, evaluate(x, e))
@@ -265,5 +265,8 @@ function repl(in::LispReader, out::IO, prompt::String)
     end
     return out
 end
+
+repl(in::IO, out::IO, prompt::String) = repl(LispReader(in), out, prompt)
+repl() = repl(Base.stdin, Base.stdout, "JuLisp> ")
 
 end # module
