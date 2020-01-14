@@ -4,6 +4,7 @@ using Test
 a = symbol("a")
 b = symbol("b")
 c = symbol("c")
+d = symbol("d")
 
 @testset "LispSymbol" begin
     @test T == symbol("t")
@@ -69,13 +70,7 @@ end
 end
 
 @testset "evaluate" begin
-    e = env()
-    define(e, NIL, NIL)
-    define(e, QUOTE, special((s, x, e) -> car(x)))
-    define(e, symbol("car"), procedure(a -> a.car.car))
-    define(e, symbol("cdr"), procedure(a -> a.car.cdr))
-    define(e, symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)))
-    define(e, symbol("list"), procedure(a -> a))
+    e = defaultEnv()
     @test a == evaluate(lispRead("'a"), e)
     @test a == evaluate(lispRead("(car '(a . b))"), e)
     @test b == evaluate(lispRead("(cdr '(a . b))"), e)
@@ -85,18 +80,10 @@ end
 end
 
 @testset "Closure" begin
-    e = env()
-    define(e, NIL, NIL)
-    define(e, QUOTE, special((s, a, e) -> car(a)))
-    define(e, symbol("car"), procedure(a -> a.car.car))
-    define(e, symbol("cdr"), procedure(a -> a.car.cdr))
-    define(e, symbol("cons"), procedure(a -> cons(a.car, a.cdr.car)))
-    define(e, symbol("list"), procedure(a -> a))
-    define(e, symbol("lambda"), special((s, a, e) -> closure(a.car, a.cdr, e)))
+    e = defaultEnv()
     @test a == evaluate(lispRead("((lambda (a) (car a)) '(a . b))"), e)
     define(e, symbol("kar"), closure(list(a), lispRead("((car a))"), e))
     @test a == evaluate(lispRead("(kar '(a . b))"), e) 
-    define(e, symbol("define"), special((s, a, e) -> define(e, a.car, evaluate(a.cdr.car, e))))
     @test b == evaluate(lispRead("(define a 'b)"), e)
     @test b == evaluate(a, e)
     evaluate(lispRead("(define kons (lambda (a b) (cons a b)))"), e)
@@ -107,3 +94,16 @@ end
     proc(e::String) = repl(LispReader(e), IOBuffer(), "")
     @test "t\n" == String(take!(proc("(atom 'a)")))
 end
+
+@testset "append" begin
+    e = defaultEnv()
+    evaluate(lispRead("""
+        (define append
+            (lambda (a b)
+             (if (null a)
+                 b
+                 (cons (car a) (append (cdr a) b))  )))
+          """), e)
+    @test list(a, b, c, d) == evaluate(lispRead("(append '(a b) '(c d))"), e)
+end
+

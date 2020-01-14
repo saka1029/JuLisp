@@ -6,7 +6,7 @@ export null, atom
 export NIL, T, QUOTE
 export symbol
 export cons, car, cdr, list
-export env, get, define, set
+export env, defaultEnv, get, define, set
 export special, procedure, evaluate
 export closure
 export LispReader, lispRead, repl
@@ -76,6 +76,8 @@ end
 
 env() = Env(NIL)
 
+show(io::IO, e::Env) = print(io, "{$(e.bind)}")
+
 function find(env::Env, variable::Sym)
     bind = env.bind
     while bind != NIL
@@ -124,6 +126,8 @@ struct Closure <: Object
     env::Env    # クロージャが定義された時の変数束縛
     apply::Function # クロージャの関数本体
 end
+
+show(io::IO, c::Closure) = print("Closure{$(c.parms), $(c.body)}")
 
 function closureApply(closure::Closure, args::Object, env::Env)
     function pairlis(parms::Object, args::Object, env::Env)
@@ -253,21 +257,39 @@ function Base.read(r::LispReader)
 end
 
 lispRead(s::String) = read(LispReader(s))
+predicate(e::Bool) = e ? T : NIL
 
+function lispIf(s::Applicable, a::Object, e::Env)
+    c = evaluate(a.car, e)
+    if c != NIL
+        evaluate(a.cdr.car, e)
+    elseif a.cdr.cdr != NIL
+        evaluate(a.cdr.cdr.car, e)
+    else
+        NIL
+    end
+end
 
-function repl(in::LispReader, out::IO, prompt::String)
-    predicate(e::Bool) = e ? T : NIL
+function defaultEnv()
     e = env()
     define(e, NIL, NIL)
     define(e, T, T)
-    define(e, QUOTE, special((s, a, e) -> a.car))
     define(e, symbol("atom"), procedure(a -> predicate(atom(a.car))))
     define(e, symbol("null"), procedure(a -> predicate(null(a.car))))
+    define(e, symbol("eq"), procedure(a -> predicate(a.car == a.cdr.car)))
     define(e, symbol("car"), procedure(a -> a.car.car))
     define(e, symbol("cdr"), procedure(a -> a.car.cdr))
     define(e, symbol("cons"), procedure(a -> Pair(a.car, a.cdr.car)))
-    define(e, symbol("define"), special((s, a, e) -> closure(a.car, a.cdr, e)))
-    define(e, symbol("lambda"), special((s, a, e) -> define(e, a.car, evaluate(a.cdr.car, e))))
+    define(e, symbol("list"), procedure(a -> a))
+    define(e, QUOTE, special((s, a, e) -> a.car))
+    define(e, symbol("lambda"), special((s, a, e) -> closure(a.car, a.cdr, e)))
+    define(e, symbol("define"), special((s, a, e) -> define(e, a.car, evaluate(a.cdr.car, e))))
+    define(e, symbol("if"), special(lispIf))
+    return e
+end
+
+function repl(in::LispReader, out::IO, prompt::String)
+    e = defaultEnv()
     while true
         print(out, prompt)
         flush(out)
