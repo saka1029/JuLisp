@@ -90,6 +90,26 @@ end
     @test cons(a, b) == evaluate(lispRead("(kons 'a 'b)"), e)
 end
 
+@testset "defaultEnv" begin
+    e = defaultEnv()
+    @test NIL == evaluate(NIL, e)
+    @test T == evaluate(T, e)
+    @test T == evaluate(lispRead("(atom 'a)"), e)
+    @test T == evaluate(lispRead("(eq 'a 'a)"), e)
+    @test NIL == evaluate(lispRead("(eq 'a 'b)"), e)
+    @test T == evaluate(lispRead("(eq (cons 'a 'b) (cons 'a 'b))"), e)
+    @test a == evaluate(lispRead("(car '(a . b))"), e)
+    @test b == evaluate(lispRead("(cdr '(a . b))"), e)
+    @test cons(a, b) == evaluate(lispRead("(cons 'a 'b)"), e)
+    @test cons(a, cons(b, NIL)) == evaluate(lispRead("(list 'a 'b)"), e)
+    @test cons(a, b) == evaluate(lispRead("((lambda (a b) (cons a b)) 'a 'b)"), e)
+    @test a == evaluate(lispRead("(define a 'a)"), e)
+    @test a == evaluate(lispRead("a"), e)
+    @test a == evaluate(lispRead("(if t 'a 'b)"), e)
+    @test b == evaluate(lispRead("(if nil 'a 'b)"), e)
+    @test NIL == evaluate(lispRead("(if nil 'a)"), e)
+end
+
 @testset "repl" begin
     proc(e::String) = repl(LispReader(e), IOBuffer(), "")
     @test "t\n" == String(take!(proc("(atom 'a)")))
