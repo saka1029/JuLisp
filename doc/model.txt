@@ -4,23 +4,23 @@ skinparam classAttributeIconSize 0
 
 abstract class Object <<abstract>>
 
-class Cons <<struct>> {
+class Pair <<struct>> {
     + car : Object
     + cdr : Object
 }
-Object <|-- Cons
+Object <|-- Pair
 
-class LispSymbol <<struct>> {
+class Sym <<struct>> {
     + symbol : Symbol
 }
-Object <|-- LispSymbol
+Object <|-- Sym
 
 class Applicable <<struct>> {
     + apply : Function
 }
 Object <|-- Applicable
 
-class Env <<struct>> <<mutable>> {
+class Env <<struct>> {
     + bind : Object
 }
 
